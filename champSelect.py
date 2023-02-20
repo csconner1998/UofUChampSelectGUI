@@ -3,15 +3,13 @@ from PIL import Image, ImageTk, ImageEnhance
 import requests
 import urllib3
 from lcu_driver import Connector
-import webbrowser
 import tkinter as tk
 import sys
-import urllib.parse
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 connector = Connector()
-global phase, blueBans, bluePicks, redBans, redPicks, in_champ_select, closed, ready, bluePickCanvases, redPickCanvases, blueBanCanvases, redBanCanvases, notInChampSelectText, notConnectedText, reconnectButtonFlag, conThread
+global phase, blueBans, bluePicks, redBans, redPicks, in_champ_select, closed, ready, bluePickCanvases, redPickCanvases, blueBanCanvases, redBanCanvases, notInChampSelectText, notConnectedText, reconnectButtonFlag, conThread, redPlayers, bluePlayers, redName, blueName
 ready = False
 closed = False
 reconnectButtonFlag = False
@@ -40,13 +38,17 @@ def getChampionBanImage(champion):
         champion = "Renata"
     elif "Nunu & Willump" in champion:
         champion = "Nunu"
+    elif "LeBlanc" in champion:
+        champion = "Leblanc"
+    elif "Wukong" in champion:
+        champion = "MonkeyKing"
     elif "'" in champion:
         champion = champion.replace("'", "")
         champion = champion[0].upper() + champion[1:].lower()
     elif " " in champion:
         champion = champion.replace(" ", "")
-    print(champion)
     return f"http://ddragon.leagueoflegends.com/cdn/{getApiVersion()}/img/champion/{champion}.png"
+
 
 
 def getChampionPickImage(champion):
@@ -60,7 +62,11 @@ def getChampionPickImage(champion):
     elif "Renata Glasc" in champion:
         champion = "Renata"
     elif "Nunu & Willump" in champion:
-        champion = "Nunu"        
+        champion = "Nunu"
+    elif "LeBlanc" in champion:
+        champion = "Leblanc"
+    elif "Wukong" in champion:
+        champion = "MonkeyKing"
     elif "'" in champion:
         champion = champion.replace("'", "")
         champion = champion[0].upper() + champion[1:].lower()
@@ -91,7 +97,9 @@ async def connect(connection):
     deleteNotConnectedText()
     ready = True
 
-
+@connector.ws.register('/chat/v5/participants/champ-select', event_types=('CREATE', 'UPDATE', 'DELETE'))
+async def champ_chat_select_changed(connection, event):
+    print(event.data)
 @connector.ws.register('/lol-champ-select/v1/session', event_types=('CREATE', 'UPDATE', 'DELETE'))
 async def champ_select_changed(connection, event):
     global bluePicks, blueBans, redPicks, redBans, phase, in_champ_select, bluePickCanvases, redPickCanvases, blueBanCanvases, redBanCanvases
@@ -204,10 +212,6 @@ async def champ_select_changed(connection, event):
                         redPicks['pick'].append(actionArr['championId'])
                         redPicks['hover'] = 0
                     updateRedPicks()
-                print(f"bluePicks: {bluePicks}")
-                print(f"blueBans: {blueBans}")
-                print(f"redPicks: {redPicks}")
-                print(f"redBans: {redBans}")
 
 
 @connector.ws.register('/')
@@ -235,31 +239,41 @@ def on_closing():
 
 def drawPickChampion(pickNum, champion, blue, hover=False):
     global redPickCanvases, bluePickCanvases
-    print(f"pickNum: {pickNum}, champion: {champion}, blue: {blue}")
     image = Image.open(requests.get(
         getChampionPickImage(champion), stream=True).raw)
-    # crop image to 310x123 with middle of image
-    image = image.resize((310, 183))
-    image = image.crop((0, 0, 310, 123))
+    # crop image to 310x123 with middle of image'
+    if champion == "Kayle":
+        image = image.resize((372, 220))
+        image = image.crop((186, 30, 372, 104))
+        image = image.resize((372, 148))
+    elif champion == "Morgana":
+        image = image.resize((372, 220))
+        image = image.crop((186, 30, 372, 104))
+        image = image.resize((372, 148))
+    else:
+        image = image.resize((372, 220))
+        image = image.crop((0, 0, 372, 148))
     photo = ImageTk.PhotoImage(image)
     if hover:
         # make image little bit darker
         photo = ImageTk.PhotoImage(ImageEnhance.Brightness(image).enhance(0.5))
     if blue:
+        bluePickCanvases[pickNum].delete("all")
         bluePickCanvases[pickNum].create_image(0, 0, image=photo, anchor=tk.NW)
         bluePickCanvases[pickNum].image = photo
+        bluePickCanvases[pickNum].create_text(0, 0, text=bluePlayers[pickNum], font=("Arial", 30), fill="white", anchor=tk.NW)
     else:
+        redPickCanvases[pickNum].delete("all")
         redPickCanvases[pickNum].create_image(0, 0, image=photo, anchor=tk.NW)
         redPickCanvases[pickNum].image = photo
-
+        redPickCanvases[pickNum].create_text(370, 0, text=redPlayers[pickNum], font=("Arial", 30), fill="white", anchor=tk.NE)
 
 def drawBanChampion(pickNum, champion, blue):
     global redPickCanvases, bluePickCanvases
-    print(f"pickNum: {pickNum}, champion: {champion}, blue: {blue}")
     image = Image.open(requests.get(
         getChampionBanImage(champion), stream=True).raw)
     # crop image to 310x123 with middle of image
-    image = image.resize((65, 65))
+    image = image.resize((78, 78))
     # convert image to grayscale
     image = image.convert('L')
     photo = ImageTk.PhotoImage(image)
@@ -273,7 +287,6 @@ def drawBanChampion(pickNum, champion, blue):
 
 def updateBluePicks():
     global bluePicks
-    print(f"bluePicks: {bluePicks}")
     for i in range(len(bluePicks['pick'])):
         drawPickChampion(i, champs[bluePicks['pick'][i]], True)
     if bluePicks['hover']:
@@ -283,7 +296,6 @@ def updateBluePicks():
 
 def updateRedPicks():
     global redPicks
-    print(f"redPicks: {redPicks}")
     for i in range(len(redPicks['pick'])):
         drawPickChampion(i, champs[redPicks['pick'][i]], False)
     if redPicks['hover']:
@@ -293,16 +305,19 @@ def updateRedPicks():
 
 def updateBlueBans():
     global blueBans
-    print(f"blueBans: {blueBans}")
     for i in range(len(blueBans['pick'])):
         if blueBans['pick'][i] == 0:
             continue
         drawBanChampion(i, champs[blueBans['pick'][i]], True)
 
+def drawPlayerLabels():
+    global bluePickCanvases, redPickCanvases, blueBanCanvases, redBanCanvases, bluePlayers, redPlayers
+    for i in range(5):
+        bluePickCanvases[i].create_text(0, 0, text=bluePlayers[i], font=("Arial", 30), fill="white", anchor=tk.NW)
+        redPickCanvases[i].create_text(370, 0, text=redPlayers[i], font=("Arial", 30), fill="white", anchor=tk.NE)
 
 def updateRedBans():
     global redBans
-    print(f"redBans: {redBans}")
     for i in range(len(redBans['pick'])):
         if redBans['pick'][i] == 0:
             continue
@@ -319,6 +334,7 @@ def clearAllCanvases():
         canvas.delete("all")
     for canvas in redBanCanvases:
         canvas.delete("all")
+    drawPlayerLabels()
 
 
 def makeBluePickCanvases():
@@ -329,15 +345,15 @@ def makeBluePickCanvases():
         else:
             backgroundColor = '#ef7b22'
         bluePickCanvases.append(tk.Canvas(
-            root, width=310, height=123, background=backgroundColor, highlightthickness=0))
-        bluePickCanvases[i].place(x=90, y=175 + (i*123))
+            root, width=372, height=148, background=backgroundColor, highlightthickness=0))
+        bluePickCanvases[i].place(x=108, y=210 + (i*148))
     return bluePickCanvases
 
 
 def makeNotInChampSelectText():
     notInChampSelectText = tk.Label(
         root, text="Not in champion select", font=("Arial", 30), highlightbackground='#000000', highlightthickness=0)
-    notInChampSelectText.place(x=600, y=700)
+    notInChampSelectText.place(x=720, y=840)
     return notInChampSelectText
 
 
@@ -354,7 +370,7 @@ def makeNotConnectedText():
         text="Not connected to league client"
     notConnectedText = tk.Label(
         root, text=text, font=("Arial", 30), highlightbackground='#000000', highlightthickness=0)
-    notConnectedText.place(x=540, y=200)
+    notConnectedText.place(x=648, y=240)
     return notConnectedText
 
 def deleteNotConnectedText():
@@ -370,21 +386,48 @@ def makeRedPickCanvases():
         else:
             backgroundColor = '#022a6f'
         redPickCanvases.append(tk.Canvas(
-            root, width=310, height=123, background=backgroundColor, highlightthickness=0))
-        redPickCanvases[i].place(x=1200, y=175 + (i*123))
+            root, width=372, height=148, background=backgroundColor, highlightthickness=0))
+        redPickCanvases[i].place(x=1440, y=210 + (i*148))
     return redPickCanvases
 
+def setRedPlayers():
+    global redPlayers, redName
+    # players from red.txt
+    redPlayers = []
+    with open('red.txt', 'r') as f:
+        # first line is team name
+        redName = f.readline()
+        for i in range(5):
+            redPlayers.append(f.readline())
 
+def setBluePlayers():
+    global bluePlayers, blueName
+    # players from blue.txt
+    bluePlayers = []
+    with open('blue.txt', 'r') as f:
+        # first line is team name
+        blueName = f.readline()
+        for i in range(5):
+            bluePlayers.append(f.readline())
+def makeTeamNameCanvas():
+    global blueName, redName
+    blueTeamCanvas = tk.Canvas(root, width=824, height=165, background='#16171b', highlightthickness=0)
+    redTeamCanvas = tk.Canvas(root, width=824, height=165, background='#16171b', highlightthickness=0)
+    blueTeamCanvas.place(x=132, y=35)
+    redTeamCanvas.place(x=965, y=35)
+    blueTeamCanvas.create_text(412, 100, text=blueName.upper(), font=("Arial", 30, 'bold'), fill="white", anchor=tk.CENTER)
+    redTeamCanvas.create_text(412, 100, text=redName.upper(), font=("Arial", 30, 'bold'), fill="white", anchor=tk.CENTER)
+    
 def makeBlueBanCanvases():
     bluePickCanvases = []
     for i in range(3):
         bluePickCanvases.append(tk.Canvas(
-            root, width=65, height=65, background='#ef7b22', highlightthickness=0))
-        bluePickCanvases[i].place(x=127+(70*i), y=803)
+            root, width=78, height=78, background='#ef7b22', highlightthickness=0))
+        bluePickCanvases[i].place(x=152+(84*i), y=964)
     for i in range(2):
         bluePickCanvases.append(tk.Canvas(
-            root, width=65, height=65, background='#ef7b22', highlightthickness=0))
-        bluePickCanvases[i+3].place(x=355+(70*i), y=803)
+            root, width=78, height=78, background='#ef7b22', highlightthickness=0))
+        bluePickCanvases[i+3].place(x=426+(84*i), y=964)
     return bluePickCanvases
 
 
@@ -392,12 +435,12 @@ def makeRedBanCanvases():
     redBansCanvases = []
     for i in range(3):
         redBansCanvases.append(tk.Canvas(
-            root, width=65, height=65, background='#022a6f', highlightthickness=0))
-        redBansCanvases[i].place(x=1133+(70*i), y=803)
+            root, width=78, height=78, background='#022a6f', highlightthickness=0))
+        redBansCanvases[i].place(x=1360+(84*i), y=964)
     for i in range(2):
         redBansCanvases.append(tk.Canvas(
-            root, width=65, height=65, background='#022a6f', highlightthickness=0))
-        redBansCanvases[i+3].place(x=1361+(70*i), y=803)
+            root, width=78, height=78, background='#022a6f', highlightthickness=0))
+        redBansCanvases[i+3].place(x=1633+(84*i), y=964)
     return redBansCanvases
 
 
@@ -407,7 +450,7 @@ root = tk.Tk()
 root.title("League of Legends Champ Select")
 root.geometry("1600x900")
 # make background background.png
-canvas = tk.Canvas(root, width=1600, height=900)
+canvas = tk.Canvas(root, width=1920, height=1080, highlightbackground='#000000', highlightthickness=0)
 canvas.pack()
 background = tk.PhotoImage(file="background.png")
 canvas.create_image(0, 0, anchor=tk.NW, image=background)
@@ -415,9 +458,12 @@ bluePickCanvases = makeBluePickCanvases()
 redPickCanvases = makeRedPickCanvases()
 blueBanCanvases = makeBlueBanCanvases()
 redBanCanvases = makeRedBanCanvases()
+setRedPlayers()
+setBluePlayers()
+drawPlayerLabels()
+makeTeamNameCanvas()
 notInChampSelectText = makeNotInChampSelectText()
 notConnectedText = makeNotConnectedText()
-root.pack_propagate
 root.protocol("WM_DELETE_WINDOW", on_closing)
-root.wm_attributes('-transparentcolor', 'yellow')
+root.attributes('-fullscreen',True)
 root.mainloop()
