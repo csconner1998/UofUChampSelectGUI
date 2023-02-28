@@ -19,8 +19,6 @@ bluePicks = {'hover': 0, 'pick': []}
 blueBans = {'hover': 0, 'pick': []}
 redPicks = {'hover': 0, 'pick': []}
 redBans = {'hover': 0, 'pick': []}
-
-
 def getApiVersion():
     response = requests.get(
         'https://ddragon.leagueoflegends.com/api/versions.json', verify=False)
@@ -97,9 +95,6 @@ async def connect(connection):
     deleteNotConnectedText()
     ready = True
 
-@connector.ws.register('/chat/v5/participants/champ-select', event_types=('CREATE', 'UPDATE', 'DELETE'))
-async def champ_chat_select_changed(connection, event):
-    print(event.data)
 @connector.ws.register('/lol-champ-select/v1/session', event_types=('CREATE', 'UPDATE', 'DELETE'))
 async def champ_select_changed(connection, event):
     global bluePicks, blueBans, redPicks, redBans, phase, in_champ_select, bluePickCanvases, redPickCanvases, blueBanCanvases, redBanCanvases
@@ -261,12 +256,15 @@ def drawPickChampion(pickNum, champion, blue, hover=False):
         bluePickCanvases[pickNum].delete("all")
         bluePickCanvases[pickNum].create_image(0, 0, image=photo, anchor=tk.NW)
         bluePickCanvases[pickNum].image = photo
-        bluePickCanvases[pickNum].create_text(0, 0, text=bluePlayers[pickNum], font=("Arial", 30), fill="white", anchor=tk.NW)
+        bluePickCanvases[pickNum].create_text(183, 146, text=bluePlayers[pickNum], font=("Uniwars Rg", 18), fill="black", anchor=tk.CENTER)
+        bluePickCanvases[pickNum].create_text(185, 148, text=bluePlayers[pickNum], font=("Uniwars Rg", 18), fill="white", anchor=tk.CENTER)
     else:
         redPickCanvases[pickNum].delete("all")
         redPickCanvases[pickNum].create_image(0, 0, image=photo, anchor=tk.NW)
         redPickCanvases[pickNum].image = photo
-        redPickCanvases[pickNum].create_text(370, 0, text=redPlayers[pickNum], font=("Arial", 30), fill="white", anchor=tk.NE)
+        redPickCanvases[pickNum].create_text(185, 148, text=redPlayers[pickNum], font=("Uniwars Rg", 18), fill="black", anchor=tk.CENTER)
+        redPickCanvases[pickNum].create_text(185, 148, text=redPlayers[pickNum], font=("Uniwars Rg", 18), fill="white", anchor=tk.CENTER)
+        
 
 def drawBanChampion(pickNum, champion, blue):
     global redPickCanvases, bluePickCanvases
@@ -313,8 +311,10 @@ def updateBlueBans():
 def drawPlayerLabels():
     global bluePickCanvases, redPickCanvases, blueBanCanvases, redBanCanvases, bluePlayers, redPlayers
     for i in range(5):
-        bluePickCanvases[i].create_text(0, 0, text=bluePlayers[i], font=("Arial", 30), fill="white", anchor=tk.NW)
-        redPickCanvases[i].create_text(370, 0, text=redPlayers[i], font=("Arial", 30), fill="white", anchor=tk.NE)
+        bluePickCanvases[i].create_text(183, 146, text=bluePlayers[i], font=("Uniwars Rg", 18), fill="black", anchor=tk.CENTER)
+        bluePickCanvases[i].create_text(185, 148, text=bluePlayers[i], font=("Uniwars Rg", 18), fill="white", anchor=tk.CENTER)
+        redPickCanvases[i].create_text(183, 146, text=redPlayers[i], font=("Uniwars Rg", 18), fill="black", anchor=tk.CENTER)
+        redPickCanvases[i].create_text(185, 148, text=redPlayers[i], font=("Uniwars Rg", 18), fill="white", anchor=tk.CENTER)
 
 def updateRedBans():
     global redBans
@@ -341,9 +341,9 @@ def makeBluePickCanvases():
     bluePickCanvases = []
     for i in range(5):
         if i % 2 == 0:
-            backgroundColor = '#e1721c'
+            backgroundColor = '#022562'
         else:
-            backgroundColor = '#ef7b22'
+            backgroundColor = '#022a6f'
         bluePickCanvases.append(tk.Canvas(
             root, width=372, height=148, background=backgroundColor, highlightthickness=0))
         bluePickCanvases[i].place(x=108, y=210 + (i*148))
@@ -352,8 +352,8 @@ def makeBluePickCanvases():
 
 def makeNotInChampSelectText():
     notInChampSelectText = tk.Label(
-        root, text="Not in champion select", font=("Arial", 30), highlightbackground='#000000', highlightthickness=0)
-    notInChampSelectText.place(x=720, y=840)
+        root, text="Not in champion select", font=("Uniwars Rg", 12), highlightbackground='#000000', highlightthickness=0)
+    notInChampSelectText.place(x=960, y=840, anchor=tk.CENTER)
     return notInChampSelectText
 
 
@@ -369,8 +369,8 @@ def makeNotConnectedText():
     else:
         text="Not connected to league client"
     notConnectedText = tk.Label(
-        root, text=text, font=("Arial", 30), highlightbackground='#000000', highlightthickness=0)
-    notConnectedText.place(x=648, y=240)
+        root, text=text, font=("Uniwars Rg", 12), highlightbackground='#000000', highlightthickness=0)
+    notConnectedText.place(x=960, y=300, anchor=tk.CENTER)
     return notConnectedText
 
 def deleteNotConnectedText():
@@ -382,9 +382,9 @@ def makeRedPickCanvases():
     redPickCanvases = []
     for i in range(5):
         if i % 2 == 0:
-            backgroundColor = '#022562'
+            backgroundColor = '#890000'
         else:
-            backgroundColor = '#022a6f'
+            backgroundColor = '#CC0000'
         redPickCanvases.append(tk.Canvas(
             root, width=372, height=148, background=backgroundColor, highlightthickness=0))
         redPickCanvases[i].place(x=1440, y=210 + (i*148))
@@ -398,7 +398,7 @@ def setRedPlayers():
         # first line is team name
         redName = f.readline()
         for i in range(5):
-            redPlayers.append(f.readline())
+            redPlayers.append(f.readline().upper())
 
 def setBluePlayers():
     global bluePlayers, blueName
@@ -408,38 +408,38 @@ def setBluePlayers():
         # first line is team name
         blueName = f.readline()
         for i in range(5):
-            bluePlayers.append(f.readline())
+            bluePlayers.append(f.readline().upper())
 def makeTeamNameCanvas():
     global blueName, redName
     blueTeamCanvas = tk.Canvas(root, width=824, height=165, background='#16171b', highlightthickness=0)
     redTeamCanvas = tk.Canvas(root, width=824, height=165, background='#16171b', highlightthickness=0)
     blueTeamCanvas.place(x=132, y=35)
     redTeamCanvas.place(x=965, y=35)
-    blueTeamCanvas.create_text(412, 100, text=blueName.upper(), font=("Arial", 30, 'bold'), fill="white", anchor=tk.CENTER)
-    redTeamCanvas.create_text(412, 100, text=redName.upper(), font=("Arial", 30, 'bold'), fill="white", anchor=tk.CENTER)
+    blueTeamCanvas.create_text(412, 100, text=blueName.upper(), font=("Uniwars Bl", 30), fill="white", anchor=tk.CENTER)
+    redTeamCanvas.create_text(412, 100, text=redName.upper(), font=("Uniwars Bl", 30), fill="white", anchor=tk.CENTER)
     
 def makeBlueBanCanvases():
-    bluePickCanvases = []
+    blueBanCanvases = []
     for i in range(3):
-        bluePickCanvases.append(tk.Canvas(
-            root, width=78, height=78, background='#ef7b22', highlightthickness=0))
-        bluePickCanvases[i].place(x=152+(84*i), y=964)
+        blueBanCanvases.append(tk.Canvas(
+            root, width=78, height=78, background='#022a6f', highlightthickness=0))
+        blueBanCanvases[i].place(x=152+(84*i), y=964)
     for i in range(2):
-        bluePickCanvases.append(tk.Canvas(
-            root, width=78, height=78, background='#ef7b22', highlightthickness=0))
-        bluePickCanvases[i+3].place(x=426+(84*i), y=964)
-    return bluePickCanvases
+        blueBanCanvases.append(tk.Canvas(
+            root, width=78, height=78, background='#022a6f', highlightthickness=0))
+        blueBanCanvases[i+3].place(x=426+(84*i), y=964)
+    return blueBanCanvases
 
 
 def makeRedBanCanvases():
     redBansCanvases = []
     for i in range(3):
         redBansCanvases.append(tk.Canvas(
-            root, width=78, height=78, background='#022a6f', highlightthickness=0))
+            root, width=78, height=78, background='#890000', highlightthickness=0))
         redBansCanvases[i].place(x=1360+(84*i), y=964)
     for i in range(2):
         redBansCanvases.append(tk.Canvas(
-            root, width=78, height=78, background='#022a6f', highlightthickness=0))
+            root, width=78, height=78, background='#890000', highlightthickness=0))
         redBansCanvases[i+3].place(x=1633+(84*i), y=964)
     return redBansCanvases
 
@@ -448,7 +448,7 @@ conThread = threading.Thread(target=connector.start)
 conThread.start()
 root = tk.Tk()
 root.title("League of Legends Champ Select")
-root.geometry("1600x900")
+root.geometry("1920x1080")
 # make background background.png
 canvas = tk.Canvas(root, width=1920, height=1080, highlightbackground='#000000', highlightthickness=0)
 canvas.pack()
