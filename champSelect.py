@@ -1,3 +1,4 @@
+import os
 import threading
 from PIL import Image, ImageTk, ImageEnhance
 import requests
@@ -9,9 +10,12 @@ import sys
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 connector = Connector()
-global phase, blueBans, bluePicks, redBans, redPicks, in_champ_select, closed, ready, bluePickCanvases, redPickCanvases, blueBanCanvases, redBanCanvases, notInChampSelectText, notConnectedText, reconnectButtonFlag, conThread, redPlayers, bluePlayers, redName, blueName
+global phase, blueBans, bluePicks, redBans, redPicks, in_champ_select, closed, ready, bluePickCanvases, redPickCanvases, blueBanCanvases, redBanCanvases, notInChampSelectText, notConnectedText, reconnectButtonFlag, conThread, redPlayers, bluePlayers, redName, blueName, imageI, imageList, imageCanvas
 ready = False
+imageCanvas = None
+imageList = os.listdir("images")
 closed = False
+imageI = 0
 reconnectButtonFlag = False
 reconnectButton = None
 phase = ''
@@ -443,6 +447,22 @@ def makeRedBanCanvases():
         redBansCanvases[i+3].place(x=1633+(84*i), y=964)
     return redBansCanvases
 
+# NOTE: must have a folder called images with all the images in it of size 750x380, also change line 464 if you want to change the time between images
+def drawImages():
+    global imageI, imageCanvas
+    if imageI == len(imageList):
+        imageI = 0
+    if imageCanvas != None:
+        imageCanvas.destroy()
+    print("drawing:" + imageList[imageI])
+    imageCanvas = tk.Canvas(root, width=750, height=380, highlightbackground='#000000', highlightthickness=0)
+    imageCanvas.place(x=960, y=540, anchor=tk.CENTER)
+    image = tk.PhotoImage(file="images/" + imageList[imageI])
+    imageCanvas.create_image(0, 0, anchor=tk.NW, image=image)
+    imageCanvas.image = image
+    imageI += 1
+    root.after(10000, drawImages)
+
 
 conThread = threading.Thread(target=connector.start)
 conThread.start()
@@ -454,6 +474,8 @@ canvas = tk.Canvas(root, width=1920, height=1080, highlightbackground='#000000',
 canvas.pack()
 background = tk.PhotoImage(file="background.png")
 canvas.create_image(0, 0, anchor=tk.NW, image=background)
+drawImages()
+
 bluePickCanvases = makeBluePickCanvases()
 redPickCanvases = makeRedPickCanvases()
 blueBanCanvases = makeBlueBanCanvases()
