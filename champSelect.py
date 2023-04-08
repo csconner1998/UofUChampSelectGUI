@@ -6,6 +6,7 @@ import urllib3
 from lcu_driver import Connector
 import tkinter as tk
 import sys
+from PIL import Image, ImageDraw
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -28,6 +29,84 @@ def getApiVersion():
         'https://ddragon.leagueoflegends.com/api/versions.json', verify=False)
     return response.json()[0]
 
+# Constants for image dimensions
+HEIGHT = 135
+WIDTH = 1080
+COLUMN_WIDTH = 90
+COLUMN_HEIGHT = 90
+IMAGE_SIZE = (90, 90)
+BAN_IMAGE_SIZE = (45, 45)
+
+# Constants for colors and fonts
+BACKGROUND_COLOR = (0, 0, 0, 0)
+def generate_picks_bans(champions, bans, output_file):
+    """
+    Generates a PNG file for picks and bans in League of Legends given a list of champions and their images.
+    champions: a list of strings representing champion names.
+    champion_images: a dictionary mapping champion names to their image files.
+    output_file: a string representing the output file name.
+    """
+    # Create a new image with the specified dimensions and background color
+    img = Image.new("RGBA", (WIDTH, HEIGHT), BACKGROUND_COLOR)
+
+    # Add a header text
+    draw = ImageDraw.Draw(img)
+    # header_text = "Picks and Bans"
+    # header_width, header_height = draw.textsize(header_text, HEADER_FONT)
+    # header_x = (WIDTH - header_width) / 2
+    # draw.text((header_x, 10), header_text, TEXT_COLOR, HEADER_FONT)
+
+    # Calculate the x-coordinates for the left and right columns
+    # x_left = (WIDTH - (COLUMN_WIDTH * 5)) / 2 - 10
+    # x_right = x_left + COLUMN_WIDTH + 20
+
+    # Add the champion images and names in two columns
+    x = 0
+    y = 0
+    for i, champion in enumerate(champions):
+        # Open the champion image and resize it to the desired size
+        champion_image = Image.open(requests.get(
+        getChampionBanImage(champs[champion]), stream=True).raw)
+        champion_image = champion_image.resize(IMAGE_SIZE)
+
+        # Crop the champion image to a square and paste it onto the background image
+        image_x = x + (COLUMN_WIDTH - IMAGE_SIZE[0]) / 2
+        image_y = y + (COLUMN_HEIGHT - IMAGE_SIZE[1]) / 2
+        img.paste(champion_image, (int(image_x), int(image_y)))
+
+        # # Add the champion name below the image
+        # text_width, text_height = draw.textsize(champion, CHAMPION_FONT)
+        # text_x = x + (COLUMN_WIDTH - text_width) / 2
+        # draw.text((int(text_x), int(y + COLUMN_HEIGHT + 10)), champion, TEXT_COLOR, CHAMPION_FONT)
+
+        if (i + 1) % 5 == 0:
+            x += COLUMN_WIDTH*2
+        x += COLUMN_HEIGHT
+    x=0
+    y=90
+    for i, champion in enumerate(bans):
+        # Open the champion image and resize it to the desired size
+        champion_image = Image.open(requests.get(
+        getChampionBanImage(champs[champion]), stream=True).raw)
+        champion_image = champion_image.resize(BAN_IMAGE_SIZE)
+        # Make the image grayscale
+        enhancer = ImageEnhance.Color(champion_image)
+        champion_image = enhancer.enhance(0)
+
+        # Crop the champion image to a square and paste it onto the background image
+        image_x = x
+        image_y = y
+        img.paste(champion_image, (int(image_x), int(image_y)))
+
+        # # Add the champion name below the image
+        # text_width, text_height = draw.textsize(champion, CHAMPION_FONT)
+        # text_x = x + (COLUMN_WIDTH - text_width) / 2
+        # draw.text((int(text_x), int(y + COLUMN_HEIGHT + 10)), champion, TEXT_COLOR, CHAMPION_FONT)
+
+        if (i + 1) % 5 == 0:
+            x += COLUMN_WIDTH*7
+        x += COLUMN_HEIGHT/2
+    img.save(output_file)
 
 def getChampionBanImage(champion):
     if "Kog'Maw" in champion:
@@ -115,6 +194,13 @@ async def champ_select_changed(connection, event):
         return
     elif eventType == "Delete":
         print("Champ select ended!")
+        print(bluePicks['pick'])
+        # if bluePicks['pick'] != [] and redPicks['pick'] != [] and blueBans['pick'] != [] and redBans['pick'] != []:
+        print("Champ select ended!")
+        picks = bluePicks['pick'] + redPicks['pick']
+        bans = blueBans['pick'] + redBans['pick']
+        generate_picks_bans(picks, bans, "champ_select.png")
+        print("Image generated!")
         in_champ_select = False
         bluePicks = {'hover': 0, 'pick': []}
         blueBans = {'hover': 0, 'pick': []}
